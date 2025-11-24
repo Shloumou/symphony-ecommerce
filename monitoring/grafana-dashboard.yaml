@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: ecommerce
+data:
+  ecommerce-overview.json: |
+    {
+      "dashboard": {
+        "title": "Ecommerce Application Overview",
+        "tags": ["ecommerce", "kubernetes"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Pod Status",
+            "type": "stat",
+            "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+            "targets": [
+              {
+                "expr": "count(kube_pod_status_phase{namespace=\"ecommerce\", phase=\"Running\"})",
+                "legendFormat": "Running Pods"
+              }
+            ]
+          },
+          {
+            "id": 2,
+            "title": "CPU Usage by Pod",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 18, "x": 6, "y": 0},
+            "targets": [
+              {
+                "expr": "rate(container_cpu_usage_seconds_total{namespace=\"ecommerce\"}[5m])",
+                "legendFormat": "{{pod}}"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Memory Usage by Pod",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+            "targets": [
+              {
+                "expr": "container_memory_usage_bytes{namespace=\"ecommerce\"}",
+                "legendFormat": "{{pod}}"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "MySQL Queries",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+            "targets": [
+              {
+                "expr": "rate(mysql_global_status_queries[5m])",
+                "legendFormat": "Queries/sec"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Pod Restart Count",
+            "type": "table",
+            "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+            "targets": [
+              {
+                "expr": "kube_pod_container_status_restarts_total{namespace=\"ecommerce\"}",
+                "format": "table"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Network Traffic",
+            "type": "graph",
+            "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+            "targets": [
+              {
+                "expr": "rate(container_network_receive_bytes_total{namespace=\"ecommerce\"}[5m])",
+                "legendFormat": "RX - {{pod}}"
+              },
+              {
+                "expr": "rate(container_network_transmit_bytes_total{namespace=\"ecommerce\"}[5m])",
+                "legendFormat": "TX - {{pod}}"
+              }
+            ]
+          }
+        ]
+      }
+    }

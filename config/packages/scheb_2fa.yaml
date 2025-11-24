@@ -1,0 +1,20 @@
+scheb_two_factor:
+    persister: scheb_two_factor.persister.doctrine
+    model_manager_name: ~
+    
+    # Configure security tokens
+    security_tokens:
+        - Symfony\Component\Security\Core\Authentication\Token\UsernamePasswordToken
+        - Symfony\Component\Security\Http\Authenticator\Token\PostAuthenticationToken
+    
+    # Configure IP whitelist (optional, for trusted IPs)
+    ip_whitelist: []
+    
+    # TOTP authentication configuration
+    totp:
+        enabled: true
+        server_name: 'Ecommerce Symfony'
+        issuer: 'Ecommerce Symfony'
+        window: 1
+        parameters:
+            image: 'https://symfony.com/logos/symfony_black_03.png'

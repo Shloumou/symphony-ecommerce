@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:5.7
+    container_name: ecommerce_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: db_name
+      MYSQL_USER: hasen
+      MYSQL_PASSWORD: hasen
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - ecommerce_network
+
+  # phpMyAdmin - Web interface for MySQL
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: ecommerce_phpmyadmin
+    depends_on:
+      - mysql
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: hasen
+      PMA_PASSWORD: hasen
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "8080:80"
+    networks:
+      - ecommerce_network
+
+  # Symfony Application (optional - if you want to run it in Docker)
+  # php:
+  #   build: .
+  #   container_name: ecommerce_php
+  #   depends_on:
+  #     - mysql
+  #   volumes:
+  #     - .:/var/www/html
+  #   ports:
+  #     - "8000:80"
+  #   networks:
+  #     - ecommerce_network
+
+volumes:
+  mysql_data:
+
+networks:
+  ecommerce_network:
+    driver: bridge

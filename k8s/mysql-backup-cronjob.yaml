@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-backup-pvc
+  namespace: ecommerce
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mysql-backup
+  namespace: ecommerce
+spec:
+  # Run every day at 2 AM
+  schedule: "0 2 * * *"
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: mysql-backup
+            image: mysql:8.0
+            env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: mysql-root-password
+            - name: MYSQL_DATABASE
+              value: "ecommerce_db"
+            - name: MYSQL_HOST
+              value: "mysql"
+            command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              BACKUP_DATE=$(date +%Y%m%d_%H%M%S)
+              BACKUP_FILE="/backups/ecommerce_db_backup_${BACKUP_DATE}.sql"
+              
+              echo "Starting backup at $(date)"
+              echo "Backup file: ${BACKUP_FILE}"
+              
+              # Create backup
+              mysqldump -h${MYSQL_HOST} \
+                -uroot \
+                -p${MYSQL_ROOT_PASSWORD} \
+                --databases ${MYSQL_DATABASE} \
+                --single-transaction \
+                --quick \
+                --lock-tables=false \
+                --routines \
+                --triggers \
+                --events \
+                > ${BACKUP_FILE}
+              
+              if [ $? -eq 0 ]; then
+                echo "Backup completed successfully: ${BACKUP_FILE}"
+                # Compress the backup
+                gzip ${BACKUP_FILE}
+                echo "Backup compressed: ${BACKUP_FILE}.gz"
+                
+                # Keep only last 30 days of backups
+                find /backups -name "*.sql.gz" -type f -mtime +30 -delete
+                echo "Old backups cleaned up"
+                
+                # Show backup size
+                ls -lh ${BACKUP_FILE}.gz
+              else
+                echo "Backup failed!"
+                exit 1
+              fi
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backups
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: mysql-backup-pvc

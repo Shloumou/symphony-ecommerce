@@ -1,0 +1,76 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Setup Two-Factor Authentication{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h3><i class="bi bi-shield-lock"></i> Two-Factor Authentication Required</h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <strong>Security Notice:</strong> Two-Factor Authentication (2FA) has been automatically enabled for your account to enhance security.
+                    </div>
+
+                    <h5 class="mt-4">📱 Step 1: Install an Authenticator App</h5>
+                    <p>If you don't have one, download an authenticator app:</p>
+                    <ul>
+                        <li><strong>Google Authenticator</strong> (iOS/Android)</li>
+                        <li><strong>Microsoft Authenticator</strong> (iOS/Android)</li>
+                        <li><strong>Authy</strong> (iOS/Android/Desktop)</li>
+                    </ul>
+
+                    <hr>
+
+                    <h5>🔍 Step 2: Scan this QR Code</h5>
+                    <p>Open your authenticator app and scan this QR code:</p>
+                    <div class="text-center my-4 p-4 bg-light rounded">
+                        {# Use the inlined data URI when available (works during 2FA flow). Fall back to the image route otherwise. #}
+                        <img src="{{ qrCodeDataUri|default(path('2fa_qr_code')) }}" alt="QR Code" class="img-fluid" style="max-width: 250px;">
+                    </div>
+
+                    <div class="alert alert-secondary">
+                        <strong>Can't scan?</strong> Manually enter this secret in your app:<br>
+                        <code>{{ user.totpSecret }}</code>
+                    </div>
+
+                    <hr>
+
+                    <h5>🔢 Step 3: Enter the 6-digit Code</h5>
+                    <p>Once you've scanned the QR code, enter the 6-digit code from your authenticator app below:</p>
+                    
+                    <form action="{{ path('2fa_login_check') }}" method="post">
+                        <div class="form-group mb-3">
+                            <input type="text" 
+                                   id="_auth_code" 
+                                   name="_auth_code" 
+                                   class="form-control form-control-lg text-center" 
+                                   maxlength="6" 
+                                   pattern="[0-9]{6}"
+                                   placeholder="000000"
+                                   autocomplete="off"
+                                   autofocus
+                                   required>
+                        </div>
+
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle"></i> Verify and Continue
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="mt-4 alert alert-warning">
+                        <strong>⚠️ Important:</strong> Save your secret key in a safe place. You'll need it if you lose access to your authenticator app.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

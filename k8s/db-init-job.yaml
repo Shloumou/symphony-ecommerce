@@ -1,0 +1,57 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mysql-init
+  namespace: ecommerce
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z mysql-service 3306; do
+                echo "Waiting for MySQL...";
+                sleep 2;
+              done
+              echo "MySQL is ready!"
+      containers:
+        - name: mysql-init
+          image: mysql:8.0
+          env:
+            - name: MYSQL_PWD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: MYSQL_USER
+            - name: MYSQL_DATABASE
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secrets
+                  key: MYSQL_DATABASE
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting a bit more for MySQL to be fully ready..."
+              sleep 10
+              echo "Checking if tables exist..."
+              TABLE_COUNT=$(mysql -h mysql-service -u $MYSQL_USER -D $MYSQL_DATABASE -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$MYSQL_DATABASE';" 2>/dev/null || echo "0")
+              if [ "$TABLE_COUNT" -gt "0" ]; then
+                echo "Database already initialized with $TABLE_COUNT tables. Skipping."
+                exit 0
+              fi
+              echo "Database is empty. Would import e-commerce-symfo.sql here if available in the image."
+              echo "For now, running Doctrine migrations or manual import is needed."
+              echo "You can run: kubectl -n ecommerce cp e-commerce-symfo.sql <mysql-pod>:/tmp/schema.sql"
+              echo "Then: kubectl -n ecommerce exec <mysql-pod> -- mysql -u\$MYSQL_USER -p\$MYSQL_PASSWORD \$MYSQL_DATABASE < /tmp/schema.sql"
+              exit 0

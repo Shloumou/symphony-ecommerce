@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Two-Factor Authentication</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+        }
+        .qr-section {
+            flex: 1;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .qr-section h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+        .qr-code {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .qr-code img {
+            display: block;
+            width: 250px;
+            height: 250px;
+        }
+        .qr-info {
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .secret-key {
+            background: rgba(255,255,255,0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .form-section {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .form-section h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .form-section p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 18px;
+            text-align: center;
+            letter-spacing: 0.3em;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button[type="submit"] {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button[type="submit"]:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #c33;
+        }
+        .alert {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #1565c0;
+        }
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            .qr-section {
+                padding: 30px 20px;
+            }
+            .form-section {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {# Always show QR code section for first-time setup #}
+        <div class="qr-section">
+            <h2>📱 Scan QR Code</h2>
+            <div class="qr-code">
+                {# Generate QR code inline #}
+                {% set user = app.user %}
+                {% if user and user.totpSecret %}
+                    {% set qrContent = 'otpauth://totp/' ~ 'Ecommerce Symfony' ~ ':' ~ user.email ~ '?secret=' ~ user.totpSecret ~ '&issuer=' ~ 'Ecommerce Symfony' %}
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data={{ qrContent|url_encode }}" alt="QR Code for 2FA" />
+                {% endif %}
+            </div>
+            <div class="qr-info">
+                <p><strong>First time?</strong> Scan this QR code with your authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc.)</p>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h1>🔒 Two-Factor Authentication</h1>
+            <p>Enter the 6-digit code from your authenticator app</p>
+            
+            {% if authenticationError %}
+                <div class="error">
+                    {{ authenticationError|trans({}, 'SchebTwoFactorBundle') }}
+                </div>
+            {% endif %}
+            
+            <form action="{{ checkPathUrl|default(path('2fa_login_check')) }}" method="post">
+                <div class="form-group">
+                    <label for="_auth_code">Authentication Code</label>
+                    <input 
+                        type="text" 
+                        id="_auth_code" 
+                        name="_auth_code" 
+                        autocomplete="one-time-code" 
+                        autofocus 
+                        required 
+                        maxlength="6"
+                        pattern="[0-9]{6}"
+                        placeholder="000000"
+                    />
+                </div>
+                
+                {% if isCsrfProtectionEnabled %}
+                    <input type="hidden" name="{{ csrfParameterName }}" value="{{ csrf_token(csrfTokenId) }}" />
+                {% endif %}
+                
+                {% if displayTrustedOption %}
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label style="display: flex; align-items: center; cursor: pointer; font-weight: normal;">
+                            <input type="checkbox" name="_trusted" style="width: auto; margin-right: 8px;" />
+                            Trust this device for {{ trustedOptionDays }} days
+                        </label>
+                    </div>
+                {% endif %}
+                
+                <button type="submit">✓ Verify Code</button>
+            </form>
+            
+            {% if displayCancelLink|default(false) %}
+                <div style="text-align: center; margin-top: 20px;">
+                    <a href="{{ logoutUrl }}" style="color: #666; text-decoration: none;">Cancel</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
