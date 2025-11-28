@@ -20,10 +20,10 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     libjpeg-dev \
     libfreetype6-dev \
-    libsqlite3-dev \
+    libpq-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_mysql pdo_sqlite intl gd \
-    && docker-php-ext-enable gd \
+    && docker-php-ext-install pdo pdo_pgsql intl gd zip opcache \
+    && docker-php-ext-enable gd opcache \
     && a2enmod rewrite
 
 WORKDIR /var/www/html
