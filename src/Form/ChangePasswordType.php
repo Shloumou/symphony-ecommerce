@@ -47,7 +47,7 @@ class ChangePasswordType extends AbstractType
                 'first_options'  => [
                     'label' => 'Nouveau mot de passe',
                     'attr' => ['placeholder' => 'Saisir mot de passe souhaité'],
-                    'help' => 'Minimum 12 caractères avec majuscule, minuscule, chiffre et caractère spécial'
+                    'help' => 'Minimum 8 caractères avec majuscule, minuscule, chiffre et caractère spécial'
                 ],
                 'second_options' => [
                     'label' => 'Répétez mot de passe',
@@ -62,12 +62,12 @@ class ChangePasswordType extends AbstractType
                         'message' => 'Veuillez renseigner un mot de passe',
                     ]),
                     new Length([
-                        'min' => 12,
+                        'min' => 8,
                         'minMessage' => 'Votre mot de passe doit contenir minimum {{ limit }} caractères',
                         'max' => 4096,
                     ]),
                     new StrongPassword([
-                        'minLength' => 12,
+                        'minLength' => 8,
                     ]),
                 ],
             ])

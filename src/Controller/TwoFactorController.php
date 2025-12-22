@@ -22,23 +22,32 @@ class TwoFactorController extends AbstractController
         SessionInterface $session, 
         TotpAuthenticatorInterface $totpAuthenticator,
         TokenStorageInterface $tokenStorage,
-        LoggerInterface $logger
+        LoggerInterface $logger,
+        EntityManagerInterface $em
     ): Response {
-        // During 2FA, the user is in the token but getUser() might return null
-        // So we get it from the token storage directly
+        // During 2FA, the user is in the token but might not be fully hydrated
+        // Get fresh user from database to ensure all data is available
         $token = $tokenStorage->getToken();
-        $user = $token ? $token->getUser() : null;
+        $userFromToken = $token ? $token->getUser() : null;
         
-        $logger->info('2FA Login - User from token: ' . ($user ? get_class($user) : 'NULL'));
+        // If we have a user identifier, fetch the full user entity from database
+        $user = null;
+        if ($userFromToken && method_exists($userFromToken, 'getUserIdentifier')) {
+            $userIdentifier = $userFromToken->getUserIdentifier();
+            $user = $em->getRepository(\App\Entity\User::class)->findOneBy(['email' => $userIdentifier]);
+            $logger->info('2FA Login - User fetched from DB: ' . ($user ? $user->getEmail() : 'NULL'));
+        }
+        
+        if (!$user) {
+            $logger->error('2FA Login - No user found in token or database');
+            throw $this->createAccessDeniedException('User not found for 2FA authentication');
+        }
         
         // Check if we need to show the setup page
         if ($session->get('show_2fa_setup', false)) {
             $session->remove('show_2fa_setup');
 
-            if ($user && method_exists($user, 'getTotpSecret') && $user->getTotpSecret()) {
-                // Try to generate a PNG data URI for the QR code so it can be
-                // displayed even in the 2FA flow where direct image routes
-                // may not have access to the fully-authenticated user.
+            if ($user->getTotpSecret()) {
                 $qrCodeDataUri = null;
                 try {
                     $qrCodeContent = $totpAuthenticator->getQRContent($user);
@@ -52,7 +61,7 @@ class TwoFactorController extends AbstractController
                         ->build();
 
                     $qrCodeDataUri = 'data:image/png;base64,' . base64_encode($result->getString());
-                    $logger->info('2FA Setup - QR Code data URI generated (setup flow)');
+                    $logger->info('2FA Setup - QR Code data URI generated successfully');
                 } catch (\Exception $e) {
                     $logger->error('2FA Setup - QR Code generation failed: ' . $e->getMessage());
                     $qrCodeDataUri = null;
@@ -65,41 +74,39 @@ class TwoFactorController extends AbstractController
             }
         }
         
-        // Generate QR code data URI if user has a secret
+        // Always generate QR code for 2FA login page so user can scan if needed
         $qrCodeDataUri = null;
-        if ($user && method_exists($user, 'getTotpSecret')) {
-            $totpSecret = $user->getTotpSecret();
-            $logger->info('2FA Login - User has TOTP secret: ' . ($totpSecret ? 'YES' : 'NO'));
-            
-            if ($totpSecret) {
-                try {
-                    $qrCodeContent = $totpAuthenticator->getQRContent($user);
-                    $logger->info('2FA Login - QR Content generated: ' . substr($qrCodeContent, 0, 50) . '...');
-                    
-                    $result = Builder::create()
-                        ->writer(new PngWriter())
-                        ->data($qrCodeContent)
-                        ->encoding(new Encoding('UTF-8'))
-                        ->errorCorrectionLevel(new ErrorCorrectionLevelHigh())
-                        ->size(250)
-                        ->margin(10)
-                        ->build();
-                    
-                    $qrCodeDataUri = 'data:image/png;base64,' . base64_encode($result->getString());
-                    $logger->info('2FA Login - QR Code data URI generated successfully (length: ' . strlen($qrCodeDataUri) . ')');
-                } catch (\Exception $e) {
-                    // Log the error for debugging
-                    $logger->error('QR Code generation failed: ' . $e->getMessage());
-                    $qrCodeDataUri = null;
-                }
+        $totpSecret = $user->getTotpSecret();
+        
+        $logger->info('2FA Login - User: ' . $user->getEmail() . ', Has TOTP secret: ' . ($totpSecret ? 'YES' : 'NO'));
+        
+        if ($totpSecret) {
+            try {
+                $qrCodeContent = $totpAuthenticator->getQRContent($user);
+                $logger->info('2FA Login - QR Content: ' . substr($qrCodeContent, 0, 50) . '...');
+                
+                $result = Builder::create()
+                    ->writer(new PngWriter())
+                    ->data($qrCodeContent)
+                    ->encoding(new Encoding('UTF-8'))
+                    ->errorCorrectionLevel(new ErrorCorrectionLevelHigh())
+                    ->size(250)
+                    ->margin(10)
+                    ->build();
+                
+                $qrCodeDataUri = 'data:image/png;base64,' . base64_encode($result->getString());
+                $logger->info('2FA Login - QR Code generated successfully (length: ' . strlen($qrCodeDataUri) . ')');
+            } catch (\Exception $e) {
+                $logger->error('QR Code generation failed: ' . $e->getMessage());
+                $logger->error('Stack trace: ' . $e->getTraceAsString());
+                $qrCodeDataUri = null;
             }
         } else {
-            $logger->warning('2FA Login - User object issue. User: ' . ($user ? get_class($user) : 'null') . ', Has getTotpSecret: ' . (method_exists($user, 'getTotpSecret') ? 'YES' : 'NO'));
+            $logger->warning('2FA Login - User has no TOTP secret');
         }
         
-        $logger->info('2FA Login - Rendering template with qrCodeDataUri: ' . ($qrCodeDataUri ? 'SET' : 'NULL'));
+        $logger->info('2FA Login - Rendering template with qrCodeDataUri: ' . ($qrCodeDataUri ? 'SET (' . strlen($qrCodeDataUri) . ' chars)' : 'NULL'));
         
-        // Pass user and QR code to template
         return $this->render('security/2fa_form.html.twig', [
             'user' => $user,
             'qrCodeDataUri' => $qrCodeDataUri,
