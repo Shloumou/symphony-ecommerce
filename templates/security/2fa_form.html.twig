@@ -137,12 +137,40 @@
     <div class="container">
         {% if qrCodeDataUri %}
         <div class="qr-section">
-            <h2>�� Scan QR Code</h2>
+            <h2>📱 Scan QR Code</h2>
             <div class="qr-code">
                 <img src="{{ qrCodeDataUri }}" alt="QR Code for 2FA" />
             </div>
             <div class="qr-info">
                 <p>Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
+                {% if user and user.totpSecret %}
+                <p style="margin-top: 15px; font-size: 12px; opacity: 0.9;">
+                    <strong>Can't scan?</strong><br>
+                    Manual entry code:<br>
+                    <code style="background: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 5px; font-size: 14px;">{{ user.totpSecret }}</code>
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="qr-section">
+            <h2>📱 Setup Authenticator</h2>
+            <div class="qr-info">
+                {% if user and user.totpSecret %}
+                <p style="margin-bottom: 20px;">QR code could not be generated. Please enter this secret manually in your authenticator app:</p>
+                <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 10px; word-break: break-all;">
+                    <strong>Secret Key:</strong><br>
+                    <code style="font-size: 16px; display: block; margin-top: 10px;">{{ user.totpSecret }}</code>
+                </div>
+                <p style="margin-top: 20px; font-size: 14px;">
+                    1. Open your authenticator app<br>
+                    2. Add a new account manually<br>
+                    3. Enter the secret key above<br>
+                    4. Use "Ecommerce Symfony" as the account name
+                </p>
+                {% else %}
+                <p>2FA is not properly configured. Please contact support.</p>
+                {% endif %}
             </div>
         </div>
         {% endif %}

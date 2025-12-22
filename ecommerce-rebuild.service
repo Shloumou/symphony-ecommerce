@@ -1,0 +1,16 @@
+[Unit]
+Description=Rebuild and Deploy E-commerce Application
+After=docker.service minikube.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=salem
+WorkingDirectory=/home/salem/ecommerce_web_site_with_sym-master
+ExecStart=/home/salem/ecommerce_web_site_with_sym-master/rebuild-and-deploy.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

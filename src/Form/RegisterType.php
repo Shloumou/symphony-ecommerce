@@ -49,7 +49,7 @@ class RegisterType extends AbstractType
                 'first_options'  => [
                     'label' => 'Mot de passe',
                     'attr' => ['placeholder' => 'Saisir mot de passe '],
-                    'help' => 'Minimum 12 caractères avec majuscule, minuscule, chiffre et caractère spécial'
+                    'help' => 'Minimum 8 caractères avec majuscule, minuscule, chiffre et caractère spécial'
                 ],
                 'second_options' => [
                     'label' => 'Répétez mot de passe',
@@ -64,12 +64,12 @@ class RegisterType extends AbstractType
                         'message' => 'Veuillez renseigner un mot de passe',
                     ]),
                     new Length([
-                        'min' => 12,
+                        'min' => 8,
                         'minMessage' => 'Votre mot de passe doit contenir minimum {{ limit }} caractères',
                         'max' => 4096,
                     ]),
                     new StrongPassword([
-                        'minLength' => 12,
+                        'minLength' => 8,
                     ]),
                 ],
             ])

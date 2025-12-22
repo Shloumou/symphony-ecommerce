@@ -51,7 +51,7 @@ class PaymentController extends AbstractController
             ],
             'quantity' => 1
         ];
-       Stripe::setApiKey('sk_test_51Kb6uhClAQQ2TXfzOspWIks7VFbXX5e5ZTr5c4VCIQfNJATKvQZDHBODlaDkCnNmYntKUQLZK8YF4UbNPA5gMWzg00RHLAzE0G');
+       Stripe::setApiKey($_ENV['STRIPE_SECRET_KEY'] ?? 'sk_test_YOUR_STRIPE_KEY_HERE');
         header('Content-Type: application/json');
 
         $YOUR_DOMAIN = 'http://localhost:8001';

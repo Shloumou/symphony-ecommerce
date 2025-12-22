@@ -1,11 +1,13 @@
 # Multi-stage build for Symfony app
 # Stage 1: composer install
-FROM composer:2 AS builder
+FROM composer:2.7 AS builder
 WORKDIR /app
-# Copy full project before running composer so post-install scripts (cache:clear, etc.) can access project files like bin/console
+# Copy composer files and full project
 COPY . /app
-# Update composer.lock to include new packages
-RUN composer update --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts
+# Install missing dependencies first, then install all
+RUN composer require --no-update "scheb/2fa-bundle:^6.0" "scheb/2fa-totp:^6.0" "endroid/qr-code:^4.0" && \
+    composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts --ignore-platform-reqs --no-ansi || \
+    composer update --no-dev --prefer-dist --no-interaction --optimize-autoloader --no-scripts --ignore-platform-reqs --no-ansi
 RUN composer dump-autoload --optimize --no-interaction
 
 # Stage 2: runtime image
